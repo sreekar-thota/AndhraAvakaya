@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <radialGradient id="jarGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFDF9"/>
+      <stop offset="45%" stop-color="#F7EED8"/>
+      <stop offset="100%" stop-color="#E2D4B6"/>
+    </radialGradient>
+    <linearGradient id="lidGrad" cx="50%" cy="0%" r="100%" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#B83A3F"/>
+      <stop offset="50%" stop-color="#8F2025"/>
+      <stop offset="100%" stop-color="#5E1417"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FCD670"/>
+      <stop offset="50%" stop-color="#F2B544"/>
+      <stop offset="100%" stop-color="#D49320"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B6B48"/>
+      <stop offset="100%" stop-color="#284B32"/>
+    </linearGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#38271D" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Traditional Ring -->
+  <circle cx="100" cy="100" r="92" fill="#FFF8EC" stroke="#8F2025" stroke-width="3" filter="url(#subtleShadow)"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#F2B544" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Mango Leaf Emblem behind jar top -->
+  <path d="M 100,52 C 120,40 145,55 142,80 C 130,85 115,75 100,52 Z" fill="url(#leafGrad)"/>
+  <path d="M 100,52 Q 124,65 138,78" fill="none" stroke="#8FBC8F" stroke-width="1" opacity="0.6"/>
+
+  <!-- Traditional Jaadi / Bharani (Clay Pickle Jar) -->
+  <!-- Jar Base / Body -->
+  <path d="M 64,98 C 60,118 64,146 76,155 C 85,162 115,162 124,155 C 136,146 140,118 136,98 Z" 
+        fill="url(#jarGrad)" stroke="#38271D" stroke-width="2.5"/>
+
+  <!-- Upper glazed collar of the jar -->
+  <path d="M 64,98 C 64,90 70,84 82,82 L 118,82 C 130,84 136,90 136,98 C 136,104 130,108 118,109 L 82,109 C 70,108 64,104 64,98 Z" 
+        fill="url(#lidGrad)" stroke="#38271D" stroke-width="2"/>
+  
+  <!-- Golden border accent on collar -->
+  <path d="M 66,97 Q 100,101 134,97" fill="none" stroke="url(#goldGrad)" stroke-width="2"/>
+
+  <!-- Jar Lid -->
+  <path d="M 78,82 C 78,74 88,71 100,71 C 112,71 122,74 122,82 Z" fill="url(#lidGrad)" stroke="#38271D" stroke-width="2"/>
+  <!-- Lid Knob -->
+  <circle cx="100" cy="67" r="6.5" fill="url(#goldGrad)" stroke="#38271D" stroke-width="2"/>
+
+  <!-- Traditional Sun/Mustard Dot Motifs on Jar -->
+  <circle cx="100" cy="128" r="4.5" fill="#8F2025"/>
+  <circle cx="88" cy="128" r="2.5" fill="#F2B544"/>
+  <circle cx="112" cy="128" r="2.5" fill="#F2B544"/>
+  <path d="M 82,138 Q 100,144 118,138" fill="none" stroke="#8F2025" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Twin Chillies Accent at Base -->
+  <path d="M 85,164 Q 72,168 62,160 Q 75,174 88,168 Z" fill="#8F2025"/>
+  <path d="M 115,164 Q 128,168 138,160 Q 125,174 112,168 Z" fill="#8F2025"/>
+
+  <!-- Small star sparks -->
+  <polygon points="100,24 102,29 107,31 102,33 100,38 98,33 93,31 98,29" fill="url(#goldGrad)"/>
+</svg>

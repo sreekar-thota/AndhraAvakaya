@@ -1,0 +1,182 @@
+/* ==========================================================================
+   DepthCarousel.css - React Bits 3D Depth Carousel Styles
+   ========================================================================== */
+
+.depth-carousel-root {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 460px;
+  min-height: 360px;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  perspective-origin: 50% 50%;
+  box-sizing: border-box;
+}
+
+.depth-carousel-root:active {
+  cursor: grabbing;
+}
+
+.depth-carousel-root:focus-visible {
+  border-radius: 16px;
+  outline: 2px solid var(--color-mango-yellow, #F2B544);
+  outline-offset: 4px;
+}
+
+.depth-carousel-stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.depth-carousel-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  background-color: #1a0f0a;
+  box-shadow: 0 24px 50px -16px rgba(56, 39, 29, 0.45), 0 8px 18px -8px rgba(143, 32, 37, 0.25);
+  border: 2px solid rgba(255, 248, 236, 0.85);
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+}
+
+.depth-carousel-card:hover {
+  border-color: var(--color-mango-yellow, #F2B544);
+}
+
+.depth-carousel-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.depth-carousel-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  mix-blend-mode: multiply;
+  transition: opacity 0.2s ease;
+}
+
+/* Nav Controls */
+.depth-carousel-btn {
+  position: absolute;
+  top: 50%;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(56, 39, 29, 0.65);
+  color: #FFF8EC;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.depth-carousel-btn:hover {
+  background: var(--color-chilli-red, #8F2025);
+  border-color: var(--color-mango-yellow, #F2B544);
+  color: #FFFFFF;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.depth-carousel-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.depth-carousel-btn-prev {
+  left: 12px;
+}
+
+.depth-carousel-btn-next {
+  right: 12px;
+}
+
+/* Indicators */
+.depth-carousel-indicators {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  z-index: 3000;
+  display: flex;
+  transform: translateX(-50%);
+  gap: 8px;
+  border-radius: 9999px;
+  background: rgba(40, 25, 18, 0.55);
+  padding: 6px 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(242, 181, 68, 0.2);
+}
+
+.depth-carousel-dot {
+  height: 8px;
+  cursor: pointer;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(255, 248, 236, 0.35);
+  padding: 0;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+  width: 8px;
+}
+
+.depth-carousel-dot-active {
+  width: 22px;
+  background: var(--color-mango-yellow, #F2B544);
+  box-shadow: 0 0 8px rgba(242, 181, 68, 0.6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .depth-carousel-root {
+    height: 400px;
+    min-height: 320px;
+  }
+  .depth-carousel-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .depth-carousel-btn-prev {
+    left: 6px;
+  }
+  .depth-carousel-btn-next {
+    right: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .depth-carousel-root {
+    height: 360px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .depth-carousel-card {
+    transition: none !important;
+  }
+  .depth-carousel-dot {
+    transition: none !important;
+  }
+}
