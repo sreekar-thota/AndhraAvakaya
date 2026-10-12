@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
+import WelcomeIntro from './components/WelcomeIntro';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -12,6 +13,9 @@ import './App.css';
 function App() {
   return (
     <div className="app-layout">
+      {/* Initial Welcome Screen Intro */}
+      <WelcomeIntro />
+
       {/* Top Navigation */}
       <Navbar />
 

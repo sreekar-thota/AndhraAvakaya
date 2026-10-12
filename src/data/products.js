@@ -2,14 +2,20 @@
  * Andhra Avakaya - Products Data
  * 
  * NOTE FOR OWNER:
- * Update product names, descriptions, images, weights, and prices below when your final
- * product menu is ready. Fields like `price` and `weights` can be modified or set to null
- * if pricing is provided on enquiry.
+ * Products are grouped into two categories: "veg" and "non-veg".
+ * To add a new product in the future, simply add an object to the PRODUCTS array
+ * with `category: "veg"` or `category: "non-veg"`.
+ * 
+ * Fields like `image` point to `/images/<your-filename>.jpg`.
  */
 
 export const PRODUCTS = [
+  // ==========================================
+  // VEGETARIAN PICKLES (category: "veg")
+  // ==========================================
   {
     id: "andhra-avakaya",
+    category: "veg",
     name: "Traditional Andhra Avakaya",
     teluguName: "ఆవకాయ",
     badge: "Signature Classic",
@@ -26,6 +32,7 @@ export const PRODUCTS = [
   },
   {
     id: "bellam-avakaya",
+    category: "veg",
     name: "Bellam Avakaya (Sweet & Spicy)",
     teluguName: "బెల్లం ఆవకాయ",
     badge: "Sweet & Tangy",
@@ -42,6 +49,7 @@ export const PRODUCTS = [
   },
   {
     id: "gongura-pachadi",
+    category: "veg",
     name: "Andhra Gongura Pachadi",
     teluguName: "గోంగూర పచ్చడి",
     badge: "Andhra Icon",
@@ -58,6 +66,7 @@ export const PRODUCTS = [
   },
   {
     id: "pandu-mirapa",
+    category: "veg",
     name: "Pandu Mirapakaya Pachadi",
     teluguName: "పండు మిరపకాయ పచ్చడి",
     badge: "Heritage Favourite",
@@ -74,6 +83,7 @@ export const PRODUCTS = [
   },
   {
     id: "tomato-nilava-pachadi",
+    category: "veg",
     name: "Tomato Nilava Pachadi",
     teluguName: "టమాటా పచ్చడి",
     badge: "Everyday Delight",
@@ -90,6 +100,7 @@ export const PRODUCTS = [
   },
   {
     id: "allam-pachadi",
+    category: "veg",
     name: "Andhra Allam Pachadi (Ginger)",
     teluguName: "అల్లం పచ్చడి",
     badge: "Zesty & Digestive",
@@ -102,6 +113,95 @@ export const PRODUCTS = [
     availableWeights: ["250g", "500g"],
     priceDisplay: "Available on Enquiry",
     approxPrice: "₹200 onwards",
+    inStock: true
+  },
+  {
+    id: "andhra-lemon-pickle",
+    category: "veg",
+    name: "Traditional Lemon Pickle (Nimmakaya)",
+    teluguName: "నిమ్మకాయ పచ్చడి",
+    badge: "Zesty Classic",
+    image: "/images/lemon_pickle.jpg",
+    shortDescription: "Sun-cured juicy yellow lemons seasoned with fragrant fenugreek, roasted mustard, and vibrant red chilli powder.",
+    fullDescription: "Our classic Nimmakaya Pachadi is made from handpicked, thin-skinned country lemons cured naturally in rock salt under the warm Andhra sun until the rinds soften to perfection. Blended with roasted fenugreek powder (methi pindi), mustard, and fiery red chillies, this time-honoured digestif pickle delivers an invigorating burst of sour, spicy, and tangy zest.",
+    spiceLevel: "Medium Spicy & Tangy",
+    keyIngredients: ["Sun-Cured Country Lemons", "Roasted Fenugreek Powder", "Mustard Seed Powder", "Guntur Chilli Powder", "Pure Sesame Oil", "Sea Salt"],
+    servingSuggestion: "The ultimate digestive companion for curd rice (perugannam), upma, dal rice, or khichdi.",
+    availableWeights: ["250g", "500g", "1kg"],
+    priceDisplay: "Available on Enquiry",
+    approxPrice: "₹180 onwards",
+    inStock: true
+  },
+
+  // ==========================================
+  // NON-VEGETARIAN PICKLES (category: "non-veg")
+  // ==========================================
+  {
+    id: "andhra-chicken-pickle",
+    category: "non-veg",
+    name: "Andhra Chicken Pickle (Boneless)",
+    teluguName: "కోడి మాంసం పచ్చడి",
+    badge: "Non-Veg Bestseller",
+    image: "/images/chicken_pickle.jpg",
+    shortDescription: "Tender boneless chicken morsels flash-fried and steeped in fiery red Guntur chilli masala, ginger, garlic, and aromatic sesame oil.",
+    fullDescription: "Prepared with succulent, country-style boneless chicken pieces that are marinated, lightly crisp-fried, and blended into an intensely flavourful masala made of roasted coriander, cumin, cloves, cardamom, ginger-garlic paste, and crushed Guntur red chillies. Matured in cold-pressed sesame oil, this Andhra speciality delivers an unforgettable spicy crunch with hot rice and ghee.",
+    spiceLevel: "Fiery / High",
+    keyIngredients: ["Tender Boneless Chicken", "Guntur Red Chilli Powder", "Ginger-Garlic Paste", "Stone-ground Garam Masala", "Curry Leaves", "Cold-Pressed Sesame Oil", "Sea Salt"],
+    servingSuggestion: "Delicious with hot steamed rice, rasam, biryani, or rolled into warm rotis.",
+    availableWeights: ["250g", "500g", "1kg"],
+    priceDisplay: "Available on Enquiry",
+    approxPrice: "₹350 onwards",
+    inStock: true
+  },
+  {
+    id: "andhra-mutton-pickle",
+    category: "non-veg",
+    name: "Traditional Andhra Mutton Pickle",
+    teluguName: "మటన్ పచ్చడి / మాంసం పచ్చడి",
+    badge: "Royal Heritage",
+    image: "/images/mutton_pickle.jpg",
+    shortDescription: "Slow-cooked tender cuts of prime mutton spiced with artisanal whole masalas and aged in fragrant spiced oil.",
+    fullDescription: "A royal Andhra delicacy crafted using select tender cuts of fresh mutton. The meat is slow-cooked to seal in juices, then gently roasted in aromatic oil before being tossed with stone-pounded spices, tart lemon/tamarind balance, and fiery red chillies. Made without artificial preservatives, ensuring every bite is rich, tender, and deeply savoury.",
+    spiceLevel: "High Spicy",
+    keyIngredients: ["Prime Mutton Cuts", "Stone-Ground Whole Spices", "Kashmiri & Guntur Red Chillies", "Fresh Ginger & Garlic", "Roasted Cumin", "Pure Sesame Oil", "Sea Salt"],
+    servingSuggestion: "Pairs majestically with bagara rice, hot steamed rice with ghee, or soft rumali rotis.",
+    availableWeights: ["250g", "500g", "1kg"],
+    priceDisplay: "Available on Enquiry",
+    approxPrice: "₹450 onwards",
+    inStock: true
+  },
+  {
+    id: "andhra-prawn-pickle",
+    category: "non-veg",
+    name: "Andhra Prawn Pickle (Royyalu)",
+    teluguName: "రొయ్యల పచ్చడి",
+    badge: "Coastal Special",
+    image: "/images/prawn_pickle.jpg",
+    shortDescription: "Juicy sea prawns roasted to a golden crisp and pickled in tangy, fiery coastal Andhra spices.",
+    fullDescription: "Hailing from the coastal belts of Andhra Pradesh, our Royyala Pachadi features fresh, plump prawns deveined and golden-fried to retain their firm, succulent bite. They are then simmered with roasted mustard, fenugreek, garlic cloves, fresh curry leaves, and sour tamarind juice in cold-pressed oil, yielding a tantalising seafood preserve that melts in the mouth.",
+    spiceLevel: "Medium-High Spicy",
+    keyIngredients: ["Fresh Cleaned Sea Prawns", "Guntur Red Chilli Powder", "Crushed Garlic", "Fenugreek Seeds", "Tamarind Extract", "Curry Leaves", "Cold-Pressed Oil", "Salt"],
+    servingSuggestion: "Heavenly when mixed into hot steamed rice with melted butter or ghee.",
+    availableWeights: ["250g", "500g", "1kg"],
+    priceDisplay: "Available on Enquiry",
+    approxPrice: "₹420 onwards",
+    inStock: true
+  },
+  {
+    id: "andhra-fish-pickle",
+    category: "non-veg",
+    name: "Andhra Fish Pickle (Chepala Pachadi)",
+    teluguName: "చేపల పచ్చడి",
+    badge: "Coastal Authentic",
+    image: "/images/fish_pickle.jpg",
+    shortDescription: "Boneless cubes of fresh fish crisp-fried and preserved in a zesty, garlic-infused mustard & chilli gravy.",
+    fullDescription: "Prepared using boneless fillets of premium fresh fish cut into bite-sized cubes. The fish pieces are spiced with turmeric and chilli, crisp-fried until golden, and married with an aged tempering of mustard seeds, fenugreek, sliced garlic pods, and lemon-tamarind reduction. A unique coastal delicacy bursting with rich umami flavour.",
+    spiceLevel: "Medium Spicy",
+    keyIngredients: ["Boneless Fresh Fish Cubes", "Crushed Mustard & Fenugreek", "Guntur Red Chilli", "Garlic Pods", "Curry Leaves", "Lemon Juice", "Cold-Pressed Oil", "Salt"],
+    servingSuggestion: "Best savoured with warm rice, dal, curd rice, or as a savoury side with South Indian meals.",
+    availableWeights: ["250g", "500g"],
+    priceDisplay: "Available on Enquiry",
+    approxPrice: "₹380 onwards",
     inStock: true
   }
 ];
