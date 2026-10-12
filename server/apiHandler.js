@@ -79,7 +79,7 @@ export async function handleApiRequest(req, res) {
     // 1. PUBLIC: GET /api/stock
     // -------------------------------------------------------------
     if (pathname === '/api/stock' && method === 'GET') {
-      const stock = getStock();
+      const stock = await getStock();
       sendJson(res, 200, {
         success: true,
         stock,
@@ -190,7 +190,7 @@ export async function handleApiRequest(req, res) {
         return true;
       }
 
-      const result = updateStock(updates);
+      const result = await updateStock(updates);
       sendJson(res, 200, {
         success: true,
         message: `Successfully updated ${result.updatedCount} products`,
