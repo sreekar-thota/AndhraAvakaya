@@ -1662,3 +1662,133 @@
     display: none;
   }
 }
+
+/* ========================================================
+   ANDHRA AVAKAYA - PACKAGE SIZE SELECTOR & ENQUIRY STYLES
+   ======================================================== */
+.category-count-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-left: 0.35rem;
+}
+
+.card-weight-selector-wrap {
+  margin: 0.85rem 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.weight-selector-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-dark-brown-light);
+}
+
+.card-weight-buttons {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.card-weight-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  border: 1.5px solid rgba(56, 39, 29, 0.18);
+  background: var(--color-warm-cream);
+  color: var(--color-dark-brown);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.card-weight-btn:hover {
+  border-color: var(--color-chilli-red);
+  background: #FFFFFF;
+  color: var(--color-chilli-red);
+  transform: translateY(-1px);
+}
+
+.card-weight-btn.is-active {
+  background: var(--color-chilli-red);
+  color: #FFFFFF;
+  border-color: var(--color-chilli-red);
+  box-shadow: 0 3px 10px rgba(143, 32, 37, 0.28);
+}
+
+.card-whatsapp-action-row {
+  margin-top: 0.95rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(56, 39, 29, 0.08);
+}
+
+.btn-whatsapp-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.72rem 1rem;
+  background: linear-gradient(135deg, #128C7E 0%, #25D366 100%);
+  color: #FFFFFF;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.28);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-whatsapp-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.42);
+}
+
+.price-highlight {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: var(--color-chilli-red);
+}
+
+.price-highlight-large {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--color-chilli-red);
+}
+
+.popout-weight-buttons {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.popout-weight-btn {
+  padding: 0.45rem 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(56, 39, 29, 0.16);
+  background: var(--color-warm-cream);
+  color: var(--color-dark-brown);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.popout-weight-btn:hover {
+  border-color: var(--color-chilli-red);
+  background: #FFFFFF;
+  color: var(--color-chilli-red);
+  transform: translateY(-1px);
+}
+
+.popout-weight-btn.is-active {
+  background: var(--color-chilli-red);
+  color: #FFFFFF;
+  border-color: var(--color-chilli-red);
+  box-shadow: 0 4px 14px rgba(143, 32, 37, 0.32);
+}

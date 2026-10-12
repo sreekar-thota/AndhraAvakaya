@@ -1,25 +1,40 @@
-import React, { useRef } from 'react';
-import { Eye, MessageCircle, Sparkles, Plus } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Eye, MessageCircle, Plus } from 'lucide-react';
 import { getWhatsAppProductUrl } from '../config/business';
+import { formatRupee } from '../data/products';
 
 export default function ProductCard({ product, onSelect, isSelected }) {
   const cardRef = useRef(null);
+  const [selectedWeight, setSelectedWeight] = useState(
+    product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
+  );
 
-  const handleClick = (e) => {
-    // If the click was directly on an action link/button inside the card, don't trigger pop-out
-    if (e.target.closest('.card-direct-action')) {
+  const currentPrice = product.prices[selectedWeight];
+  const formattedPrice = formatRupee(currentPrice);
+  const whatsappUrl = getWhatsAppProductUrl(product.name, selectedWeight, formattedPrice);
+
+  const handleCardClick = (e) => {
+    // If the click was on controls inside the card, don't trigger pop-out
+    if (e.target.closest('.card-weight-btn') || e.target.closest('.card-whatsapp-btn')) {
       return;
     }
     if (cardRef.current && onSelect) {
       const rect = cardRef.current.getBoundingClientRect();
-      onSelect(product, rect);
+      onSelect(product, rect, selectedWeight);
     }
+  };
+
+  const handleWeightSelect = (e, weight) => {
+    e.stopPropagation();
+    setSelectedWeight(weight);
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleClick(e);
+      if (!e.target.closest('.card-weight-btn') && !e.target.closest('.card-whatsapp-btn')) {
+        e.preventDefault();
+        handleCardClick(e);
+      }
     }
   };
 
@@ -27,7 +42,7 @@ export default function ProductCard({ product, onSelect, isSelected }) {
     <article
       ref={cardRef}
       className={`product-card ${isSelected ? 'product-card-placeholder' : ''}`}
-      onClick={handleClick}
+      onClick={handleCardClick}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
@@ -71,11 +86,32 @@ export default function ProductCard({ product, onSelect, isSelected }) {
           {product.shortDescription}
         </p>
 
+        {/* Quantity / Weight Selector (250g, 500g, 1kg) */}
+        <div className="card-weight-selector-wrap" onClick={(e) => e.stopPropagation()}>
+          <span className="weight-selector-label">Package Size:</span>
+          <div className="card-weight-buttons" role="group" aria-label={`Select quantity for ${product.name}`}>
+            {product.availableWeights.map((weight) => {
+              const isActive = selectedWeight === weight;
+              return (
+                <button
+                  key={weight}
+                  type="button"
+                  className={`card-weight-btn ${isActive ? 'is-active' : ''}`}
+                  onClick={(e) => handleWeightSelect(e, weight)}
+                  aria-pressed={isActive}
+                >
+                  {weight}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Card Footer: Pricing/Availability + Quick Action */}
         <div className="product-card-footer">
           <div className="product-card-price-info">
-            <span className="price-label">Pricing</span>
-            <span className="price-value">{product.approxPrice || product.priceDisplay}</span>
+            <span className="price-label">Price ({selectedWeight})</span>
+            <span className="price-value price-highlight">{formattedPrice}</span>
           </div>
 
           <div className="product-card-action-cue">
@@ -84,6 +120,21 @@ export default function ProductCard({ product, onSelect, isSelected }) {
               <Eye size={16} />
             </span>
           </div>
+        </div>
+
+        {/* Click for More Info WhatsApp Button */}
+        <div className="card-whatsapp-action-row" onClick={(e) => e.stopPropagation()}>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-whatsapp-card card-whatsapp-btn"
+            id={`whatsapp-btn-${product.id}`}
+            aria-label={`Enquire about ${product.name} ${selectedWeight} on WhatsApp`}
+          >
+            <MessageCircle size={16} />
+            <span>Click for More Info</span>
+          </a>
         </div>
       </div>
     </article>

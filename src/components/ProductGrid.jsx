@@ -7,6 +7,7 @@ import { PRODUCTS } from '../data/products';
 export default function ProductGrid() {
   const [activeCategory, setActiveCategory] = useState('veg');
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedWeight, setSelectedWeight] = useState(null);
   const [originRect, setOriginRect] = useState(null);
 
   // Filter products based on selected category ('veg' or 'non-veg')
@@ -14,14 +15,16 @@ export default function ProductGrid() {
     return PRODUCTS.filter((product) => product.category === activeCategory);
   }, [activeCategory]);
 
-  const handleSelectProduct = (product, rect) => {
+  const handleSelectProduct = (product, rect, weight) => {
     setOriginRect(rect);
     setSelectedProduct(product);
+    setSelectedWeight(weight);
   };
 
   const handleClosePopOut = () => {
     setSelectedProduct(null);
     setOriginRect(null);
+    setSelectedWeight(null);
   };
 
   const handleCategoryChange = (category) => {
@@ -64,8 +67,9 @@ export default function ProductGrid() {
               className={`category-toggle-btn ${activeCategory === 'veg' ? 'active' : ''}`}
               onClick={() => handleCategoryChange('veg')}
             >
-              <span className="category-emoji" aria-hidden="true">🥬</span>
+              <span className="category-emoji" aria-hidden="true">🌱</span>
               <span className="category-name">Veg Pickles</span>
+              <span className="category-count-badge">({PRODUCTS.filter(p => p.category === 'veg').length})</span>
             </button>
 
             <button
@@ -79,6 +83,7 @@ export default function ProductGrid() {
             >
               <span className="category-emoji" aria-hidden="true">🍗</span>
               <span className="category-name">Non Veg Pickles</span>
+              <span className="category-count-badge">({PRODUCTS.filter(p => p.category === 'non-veg').length})</span>
             </button>
           </div>
         </div>
@@ -112,7 +117,7 @@ export default function ProductGrid() {
         {/* Feature Hint Banner */}
         <div className="products-hint-banner">
           <p>
-            ✨ Tap or click on any jar to inspect its authentic ingredients, preparation story, and enquire instantly via WhatsApp.
+            🏺 Select your desired package size (250 g, 500 g, or 1 kg) on any jar, or click to explore ingredients, traditional recipes, and enquire instantly via WhatsApp.
           </p>
         </div>
 
@@ -123,6 +128,7 @@ export default function ProductGrid() {
         <ProductPopOut
           product={selectedProduct}
           originRect={originRect}
+          initialWeight={selectedWeight}
           onClose={handleClosePopOut}
         />
       )}

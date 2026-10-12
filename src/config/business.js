@@ -53,14 +53,22 @@ export const BUSINESS_CONFIG = {
 
 /**
  * Generate a WhatsApp Click-to-Chat URL
- * @param {string} productName - Optional product name
- * @param {string} customQuery - Optional custom query prefix
+ * @param {string} productName - Product name
+ * @param {string} selectedWeight - Selected package size
+ * @param {string|number} selectedPrice - Formatted or raw price
  * @returns {string} URL encoded WhatsApp chat link
  */
-export function getWhatsAppProductUrl(productName, customQuery) {
-  const query = customQuery || BUSINESS_CONFIG.defaultProductQuery;
-  const message = productName ? `${query} Product: ${productName}.` : query;
-  return `https://wa.me/${BUSINESS_CONFIG.whatsappNumber}?text=${encodeURIComponent(message)}`;
+export function getWhatsAppProductUrl(productName, selectedWeight, selectedPrice) {
+  let message;
+  if (productName && selectedWeight && selectedPrice) {
+    const formattedPrice = typeof selectedPrice === 'number' ? ('₹' + selectedPrice) : selectedPrice;
+    message = 'Hello Andhra Avakaya! I would like more information about ' + productName + ', ' + selectedWeight + ', ' + formattedPrice + '.';
+  } else if (productName) {
+    message = 'Hello Andhra Avakaya! I would like more information about ' + productName + '.';
+  } else {
+    message = BUSINESS_CONFIG.defaultProductQuery;
+  }
+  return 'https://wa.me/' + BUSINESS_CONFIG.whatsappNumber + '?text=' + encodeURIComponent(message);
 }
 
 /**
@@ -70,5 +78,5 @@ export function getWhatsAppProductUrl(productName, customQuery) {
  */
 export function getWhatsAppGeneralUrl(customMessage) {
   const message = customMessage || BUSINESS_CONFIG.generalEnquiryMessage;
-  return `https://wa.me/${BUSINESS_CONFIG.whatsappNumber}?text=${encodeURIComponent(message)}`;
+  return 'https://wa.me/' + BUSINESS_CONFIG.whatsappNumber + '?text=' + encodeURIComponent(message);
 }

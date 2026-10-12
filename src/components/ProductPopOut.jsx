@@ -1,8 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { X, MessageCircle, Flame, CheckCircle2, UtensilsCrossed, Package, ArrowRight } from 'lucide-react';
 import { getWhatsAppProductUrl } from '../config/business';
+import { formatRupee } from '../data/products';
 
-export default function ProductPopOut({ product, originRect, onClose }) {
+export default function ProductPopOut({ product, originRect, initialWeight, onClose }) {
+  const [selectedWeight, setSelectedWeight] = useState(
+    initialWeight || product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
+  );
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const modalRef = useRef(null);
@@ -60,14 +64,16 @@ export default function ProductPopOut({ product, originRect, onClose }) {
     }
   };
 
-  // WhatsApp enquiry link with URL-encoded product name
-  const whatsappUrl = getWhatsAppProductUrl(product.name);
+  const currentPrice = product.prices[selectedWeight];
+  const formattedPrice = formatRupee(currentPrice);
+
+  // WhatsApp enquiry link with URL-encoded product name, size, and price
+  const whatsappUrl = getWhatsAppProductUrl(product.name, selectedWeight, formattedPrice);
 
   // Compute CSS styles to animate from originRect to center modal
   const getStyleTransform = () => {
     if (!originRect) return {};
 
-    // Center of viewport target
     const targetWidth = Math.min(window.innerWidth * 0.94, 780);
     const targetHeight = Math.min(window.innerHeight * 0.9, 750);
     const targetLeft = (window.innerWidth - targetWidth) / 2;
@@ -183,23 +189,34 @@ export default function ProductPopOut({ product, originRect, onClose }) {
               </div>
             )}
 
-            {/* Available Quantities & Pricing */}
+            {/* Available Quantities & Pricing Selector */}
             <div className="popout-meta-row">
               <div className="popout-meta-item">
                 <span className="meta-label">
                   <Package size={15} />
-                  Available Sizes
+                  Select Package Size
                 </span>
-                <div className="weight-chips">
-                  {product.availableWeights?.map((wt) => (
-                    <span key={wt} className="weight-chip">{wt}</span>
-                  ))}
+                <div className="popout-weight-buttons" role="group" aria-label="Select package size">
+                  {product.availableWeights?.map((wt) => {
+                    const isActive = selectedWeight === wt;
+                    return (
+                      <button
+                        key={wt}
+                        type="button"
+                        className={`popout-weight-btn ${isActive ? 'is-active' : ''}`}
+                        onClick={() => setSelectedWeight(wt)}
+                        aria-pressed={isActive}
+                      >
+                        {wt}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="popout-meta-item">
-                <span className="meta-label">Pricing</span>
-                <span className="popout-price-value">{product.approxPrice || product.priceDisplay}</span>
+                <span className="meta-label">Price ({selectedWeight})</span>
+                <span className="popout-price-value price-highlight-large">{formattedPrice}</span>
               </div>
             </div>
 
@@ -217,7 +234,7 @@ export default function ProductPopOut({ product, originRect, onClose }) {
                 <ArrowRight size={18} className="whatsapp-btn-arrow" />
               </a>
               <span className="popout-whatsapp-hint">
-                Opens directly in WhatsApp with product details prefilled.
+                Opens directly in WhatsApp with {product.name}, {selectedWeight}, {formattedPrice} prefilled.
               </span>
             </div>
 
