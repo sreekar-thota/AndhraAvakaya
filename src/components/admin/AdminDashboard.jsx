@@ -66,7 +66,7 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
         for (const [id, val] of Object.entries(data.stock)) {
           cleanDraft[id] = {
             inStock: val.inStock !== false,
-            note: val.note || ''
+            note: val.note || val.stock_note || ''
           };
         }
         setDraftStock(cleanDraft);

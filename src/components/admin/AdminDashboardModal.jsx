@@ -61,7 +61,7 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
           const current = data.stock[p.id] || { inStock: true, note: '' };
           initialDraft[p.id] = {
             inStock: current.inStock !== false,
-            note: current.note || ''
+            note: current.note || current.stock_note || ''
           };
         }
         setDraftStock(initialDraft);

@@ -73,7 +73,8 @@ export function StockProvider({ children }) {
     if (!item) return { inStock: true, note: '' };
     return {
       inStock: item.inStock !== false,
-      note: item.note || '',
+      note: item.note || item.stock_note || '',
+      stock_note: item.stock_note || item.note || '',
       updatedAt: item.updatedAt
     };
   }, [stockMap]);
