@@ -32,7 +32,7 @@ A modern, fast, and authentic website built for **Andhra Avakaya**, a traditiona
      - Optional custom stock note field (e.g., *"Fresh batch arriving tomorrow"*).
      - Bulk category actions ("All In Stock" / "All Out of Stock").
      - Search bar and stock status filters.
-     - Save/update functionality persisting changes to `data/stock.json`.
+     - Persistent save/update functionality syncing with Supabase `public.inventory`.
      - Secure logout button.
 
 4. **Live Public Storefront Stock Synchronization**:
@@ -70,8 +70,14 @@ A modern, fast, and authentic website built for **Andhra Avakaya**, a traditiona
 │       ├── login.js                   # POST /api/admin/login (Auth & cookie issue)
 │       ├── logout.js                  # POST /api/admin/logout (Session clear)
 │       └── stock.js                   # POST /api/admin/stock (Protected stock update)
+├── server/
+│   ├── apiHandler.js                  # Unified serverless & local API request router
+│   ├── auth.js                        # Scrypt hashing and session token verification
+│   ├── migrateStock.js                # Diagnostic and migration utility for Supabase
+│   ├── stockService.js                # Supabase inventory service with catalog matching
+│   └── supabaseClient.js              # Server-side Supabase client singleton
 ├── data/
-│   └── stock.json                     # Shared persistent JSON inventory store
+│   └── stock.json                     # Local development stock fallback store
 ├── public/
 │   └── images/
 │       ├── logo.svg                   # Brand emblem logo
