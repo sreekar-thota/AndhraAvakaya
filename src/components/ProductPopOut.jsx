@@ -1,9 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, MessageCircle, Flame, CheckCircle2, UtensilsCrossed, Package, ArrowRight } from 'lucide-react';
+import { X, MessageCircle, Flame, CheckCircle2, UtensilsCrossed, Package, ArrowRight, Ban, AlertCircle } from 'lucide-react';
 import { getWhatsAppProductUrl } from '../config/business';
 import { formatRupee } from '../data/products';
+import { useStock } from '../context/StockContext';
 
 export default function ProductPopOut({ product, originRect, initialWeight, onClose }) {
+  const { getProductStockInfo } = useStock();
+  const stockInfo = getProductStockInfo(product.id);
+  const inStock = stockInfo.inStock;
+
   const [selectedWeight, setSelectedWeight] = useState(
     initialWeight || product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
   );
@@ -109,7 +114,7 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
     >
       <div
         ref={modalRef}
-        className={`popout-card ${isAnimatingIn && !isClosing ? 'popout-card-expanded' : ''} ${isClosing ? 'popout-card-closing' : ''}`}
+        className={`popout-card ${isAnimatingIn && !isClosing ? 'popout-card-expanded' : ''} ${isClosing ? 'popout-card-closing' : ''} ${!inStock ? 'popout-card-unavailable' : ''}`}
         style={getStyleTransform()}
       >
         {/* Floating Close Button */}
@@ -129,13 +134,27 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
             <img
               src={product.image}
               alt={product.name}
-              className="popout-hero-image"
+              className={`popout-hero-image ${!inStock ? 'thumbnail-unavailable' : ''}`}
             />
             <div className="popout-image-gradient" aria-hidden="true" />
             
-            {product.badge && (
-              <span className="popout-badge">{product.badge}</span>
-            )}
+            <div className="popout-badges-wrapper">
+              {inStock ? (
+                <span className="stock-badge badge-in-stock">
+                  <CheckCircle2 size={12} className="badge-icon" />
+                  <span>In Stock</span>
+                </span>
+              ) : (
+                <span className="stock-badge badge-out-of-stock">
+                  <Ban size={12} className="badge-icon" />
+                  <span>Out of Stock</span>
+                </span>
+              )}
+
+              {product.badge && (
+                <span className="popout-badge">{product.badge}</span>
+              )}
+            </div>
           </div>
 
           {/* Main Info Body */}
@@ -157,6 +176,14 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
                 </div>
               )}
             </div>
+
+            {/* Out-of-Stock Optional Note Banner */}
+            {!inStock && stockInfo.note && (
+              <div className="product-stock-note-pill popout-stock-note">
+                <AlertCircle size={15} className="note-icon" />
+                <span>Notice: {stockInfo.note}</span>
+              </div>
+            )}
 
             {/* In-depth Heritage Recipe Description */}
             <p className="popout-description">
@@ -195,6 +222,7 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
                 <span className="meta-label">
                   <Package size={15} />
                   Select Package Size
+                  {!inStock && <span className="unavailable-hint-tag"> (Unavailable)</span>}
                 </span>
                 <div className="popout-weight-buttons" role="group" aria-label="Select package size">
                   {product.availableWeights?.map((wt) => {
@@ -203,8 +231,9 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
                       <button
                         key={wt}
                         type="button"
-                        className={`popout-weight-btn ${isActive ? 'is-active' : ''}`}
-                        onClick={() => setSelectedWeight(wt)}
+                        disabled={!inStock}
+                        className={`popout-weight-btn ${isActive ? 'is-active' : ''} ${!inStock ? 'btn-disabled' : ''}`}
+                        onClick={() => inStock && setSelectedWeight(wt)}
                         aria-pressed={isActive}
                       >
                         {wt}
@@ -215,27 +244,43 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
               </div>
 
               <div className="popout-meta-item">
-                <span className="meta-label">Price ({selectedWeight})</span>
+                <span className="meta-label">Reference Price ({selectedWeight})</span>
                 <span className="popout-price-value price-highlight-large">{formattedPrice}</span>
               </div>
             </div>
 
-            {/* Primary Action Button: WhatsApp Enquiry */}
+            {/* Primary Action Button: WhatsApp Enquiry or Sold Out Banner */}
             <div className="popout-actions-bar">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp popout-whatsapp-btn"
-                id={`popout-whatsapp-${product.id}`}
-              >
-                <MessageCircle size={22} className="whatsapp-btn-icon" />
-                <span className="whatsapp-btn-text">Click for More Info on WhatsApp</span>
-                <ArrowRight size={18} className="whatsapp-btn-arrow" />
-              </a>
-              <span className="popout-whatsapp-hint">
-                Opens directly in WhatsApp with {product.name}, {selectedWeight}, {formattedPrice} prefilled.
-              </span>
+              {inStock ? (
+                <>
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-whatsapp popout-whatsapp-btn"
+                    id={`popout-whatsapp-${product.id}`}
+                  >
+                    <MessageCircle size={22} className="whatsapp-btn-icon" />
+                    <span className="whatsapp-btn-text">Click for More Info on WhatsApp</span>
+                    <ArrowRight size={18} className="whatsapp-btn-arrow" />
+                  </a>
+                  <span className="popout-whatsapp-hint">
+                    Opens directly in WhatsApp with {product.name}, {selectedWeight}, {formattedPrice} prefilled.
+                  </span>
+                </>
+              ) : (
+                <div className="popout-unavailable-banner">
+                  <div className="unavailable-notice-header">
+                    <Ban size={20} className="text-chilli" />
+                    <span className="unavailable-notice-title">This Pickle is Currently Out of Stock</span>
+                  </div>
+                  <p className="unavailable-notice-desc">
+                    {stockInfo.note
+                      ? `Status: ${stockInfo.note}. Purchase enquiries are temporarily paused for this product.`
+                      : 'This pickle variety is freshly prepared in small batches and is currently sold out. Check back soon for fresh batches!'}
+                  </p>
+                </div>
+              )}
             </div>
 
           </div>

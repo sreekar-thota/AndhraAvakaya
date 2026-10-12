@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { MessageCircle, Menu, X, ChevronRight } from 'lucide-react';
 import { BUSINESS_CONFIG, getWhatsAppGeneralUrl } from '../config/business';
 
-export default function Navbar() {
+export default function Navbar({ onOpenAdmin }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const logoClicksRef = React.useRef(0);
+  const clickTimeoutRef = React.useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,15 +52,41 @@ export default function Navbar() {
     }
   };
 
+  // 3-Click hidden admin access trigger on the logo
+  const handleLogoClick = (e) => {
+    logoClicksRef.current += 1;
+
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    if (logoClicksRef.current >= 3) {
+      e.preventDefault();
+      logoClicksRef.current = 0;
+      if (onOpenAdmin) {
+        onOpenAdmin();
+      }
+    } else {
+      // Normal visitors: smooth scroll to top
+      handleLinkClick(e, '#home');
+
+      // Reset counter after 1.5 seconds if 3rd click is not made
+      clickTimeoutRef.current = setTimeout(() => {
+        logoClicksRef.current = 0;
+      }, 1500);
+    }
+  };
+
   return (
     <header className={`site-header ${isScrolled ? 'site-header-scrolled' : ''}`}>
       <div className="container nav-container">
-        {/* Brand Logo & Name */}
+        {/* Brand Logo & Name with 3-click hidden trigger */}
         <a 
           href="#home" 
           className="brand-link" 
-          onClick={(e) => handleLinkClick(e, '#home')}
+          onClick={handleLogoClick}
           aria-label="Andhra Avakaya Home"
+          id="navbar-brand-logo-link"
         >
           <img 
             src={BUSINESS_CONFIG.logoSrc} 
