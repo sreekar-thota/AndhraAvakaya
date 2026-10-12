@@ -249,8 +249,8 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
               className="admin-nav-logo"
             />
             <div>
-              <h1 className="admin-nav-heading">Andhra Avakaya</h1>
-              <span className="admin-nav-subheading">Stock & Availability Management</span>
+              <h1 className="admin-nav-heading">Admin Dashboard</h1>
+              <span className="admin-nav-subheading">Andhra Avakaya — Stock & Availability Management</span>
             </div>
           </div>
 

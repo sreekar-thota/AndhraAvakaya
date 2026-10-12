@@ -63,7 +63,7 @@ export default function AdminLogin({ onLoginSuccess, onNavigateHome }) {
             <ShieldCheck size={14} />
             <span>Admin Portal</span>
           </div>
-          <h1 className="admin-login-title">Andhra Avakaya</h1>
+          <h1 className="admin-login-title">Admin Login</h1>
           <p className="admin-login-subtitle">
             Sign in to manage live pickle availability and stock
           </p>
@@ -92,7 +92,7 @@ export default function AdminLogin({ onLoginSuccess, onNavigateHome }) {
                 autoComplete="username"
                 required
                 className="admin-input"
-                placeholder="Enter admin username"
+                placeholder="Enter admin username (e.g. uday)"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 disabled={isLoading}
