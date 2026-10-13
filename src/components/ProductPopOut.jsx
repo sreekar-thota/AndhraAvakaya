@@ -1,18 +1,22 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { X, MessageCircle, Flame, CheckCircle2, UtensilsCrossed, Package, ArrowRight, Ban, AlertCircle } from 'lucide-react';
+import { X, MessageCircle, Flame, CheckCircle2, UtensilsCrossed, Package, ArrowRight, Ban, AlertCircle, ShoppingBag, Check } from 'lucide-react';
 import { getWhatsAppProductUrl } from '../config/business';
 import { formatRupee } from '../data/products';
 import { useStock } from '../context/StockContext';
+import { useCart } from '../context/CartContext';
 
 export default function ProductPopOut({ product, originRect, initialWeight, onClose }) {
   const { getProductStockInfo } = useStock();
+  const { addToCart, openCart } = useCart();
   const stockInfo = getProductStockInfo(product.id);
   const inStock = stockInfo.inStock;
 
   const [selectedWeight, setSelectedWeight] = useState(
     initialWeight || product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
   );
+  const [isAddedFeedback, setIsAddedFeedback] = useState(false);
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
+
   const [isClosing, setIsClosing] = useState(false);
   const modalRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -249,23 +253,49 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
               </div>
             </div>
 
-            {/* Primary Action Button: WhatsApp Enquiry or Sold Out Banner */}
+            {/* Primary Action Button: Add to Cart & WhatsApp Enquiry */}
             <div className="popout-actions-bar">
               {inStock ? (
                 <>
-                  <a
-                    href={whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-whatsapp popout-whatsapp-btn"
-                    id={`popout-whatsapp-${product.id}`}
-                  >
-                    <MessageCircle size={22} className="whatsapp-btn-icon" />
-                    <span className="whatsapp-btn-text">Click for More Info on WhatsApp</span>
-                    <ArrowRight size={18} className="whatsapp-btn-arrow" />
-                  </a>
+                  <div className="popout-buttons-grid">
+                    <button
+                      type="button"
+                      className={`btn btn-primary popout-cart-btn ${isAddedFeedback ? 'is-added' : ''}`}
+                      onClick={() => {
+                        const added = addToCart(product, selectedWeight, 1);
+                        if (added) {
+                          setIsAddedFeedback(true);
+                          setTimeout(() => setIsAddedFeedback(false), 1600);
+                        }
+                      }}
+                      id={`popout-add-to-cart-${product.id}`}
+                    >
+                      {isAddedFeedback ? (
+                        <>
+                          <Check size={20} />
+                          <span>Added to Cart!</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag size={20} />
+                          <span>Add to Cart ({selectedWeight})</span>
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-whatsapp popout-whatsapp-btn"
+                      id={`popout-whatsapp-${product.id}`}
+                    >
+                      <MessageCircle size={20} className="whatsapp-btn-icon" />
+                      <span className="whatsapp-btn-text">WhatsApp Enquiry</span>
+                    </a>
+                  </div>
                   <span className="popout-whatsapp-hint">
-                    Opens directly in WhatsApp with {product.name}, {selectedWeight}, {formattedPrice} prefilled.
+                    Choose pack size ({selectedWeight} - {formattedPrice}), add to cart for complete order checkout, or enquire directly.
                   </span>
                 </>
               ) : (

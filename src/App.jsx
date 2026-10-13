@@ -11,6 +11,8 @@ import AdminApp from './components/admin/AdminApp';
 import AdminLoginModal from './components/admin/AdminLoginModal';
 import AdminDashboardModal from './components/admin/AdminDashboardModal';
 import { StockProvider } from './context/StockContext';
+import { CartProvider } from './context/CartContext';
+import CartDrawer from './components/cart/CartDrawer';
 import { BUSINESS_CONFIG, getWhatsAppGeneralUrl } from './config/business';
 import './App.css';
 import './components/admin/AdminStyles.css';
@@ -68,56 +70,61 @@ function App() {
 
   return (
     <StockProvider>
-      {isAdminRoute ? (
-        <AdminApp onNavigateHome={navigateHome} />
-      ) : (
-        <div className="app-layout">
-          {/* Initial Welcome Screen Intro */}
-          <WelcomeIntro />
+      <CartProvider>
+        {isAdminRoute ? (
+          <AdminApp onNavigateHome={navigateHome} />
+        ) : (
+          <div className="app-layout">
+            {/* Initial Welcome Screen Intro */}
+            <WelcomeIntro />
 
-          {/* Top Navigation with hidden 3-click logo trigger */}
-          <Navbar onOpenAdmin={handleOpenAdminFromLogo} />
+            {/* Top Navigation with hidden 3-click logo trigger */}
+            <Navbar onOpenAdmin={handleOpenAdminFromLogo} />
 
-          {/* Main Content Landmark */}
-          <main id="main-content">
-            <Hero />
-            <About />
-            <ProductGrid />
-            <Contact />
-          </main>
+            {/* Shopping Cart Drawer */}
+            <CartDrawer />
 
-          {/* Footer (No admin links displayed) */}
-          <Footer />
+            {/* Main Content Landmark */}
+            <main id="main-content">
+              <Hero />
+              <About />
+              <ProductGrid />
+              <Contact />
+            </main>
 
-          {/* Persistent Floating WhatsApp Quick-Action */}
-          <a
-            href={getWhatsAppGeneralUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="whatsapp-float"
-            aria-label="Instant WhatsApp Enquiry"
-            title="Chat with us on WhatsApp"
-            id="floating-whatsapp-action"
-          >
-            <MessageCircle size={24} />
-            <span className="whatsapp-float-label">Enquire on WhatsApp</span>
-          </a>
+            {/* Footer (No admin links displayed) */}
+            <Footer />
 
-          {/* Admin Login Modal (Triggered by 3 clicks on logo) */}
-          <AdminLoginModal
-            isOpen={adminModalState === 'login'}
-            onClose={() => setAdminModalState(null)}
-            onLoginSuccess={() => setAdminModalState('dashboard')}
-          />
+            {/* Persistent Floating WhatsApp Quick-Action */}
+            <a
+              href={getWhatsAppGeneralUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="whatsapp-float"
+              aria-label="Instant WhatsApp Enquiry"
+              title="Chat with us on WhatsApp"
+              id="floating-whatsapp-action"
+            >
+              <MessageCircle size={24} />
+              <span className="whatsapp-float-label">Enquire on WhatsApp</span>
+            </a>
 
-          {/* Admin Inventory Dashboard Modal */}
-          <AdminDashboardModal
-            isOpen={adminModalState === 'dashboard'}
-            onClose={() => setAdminModalState(null)}
-            onLogout={() => setAdminModalState(null)}
-          />
-        </div>
-      )}
+            {/* Admin Login Modal (Triggered by 3 clicks on logo) */}
+            <AdminLoginModal
+              isOpen={adminModalState === 'login'}
+              onClose={() => setAdminModalState(null)}
+              onLoginSuccess={() => setAdminModalState('dashboard')}
+            />
+
+            {/* Admin Inventory Dashboard Modal */}
+            <AdminDashboardModal
+              isOpen={adminModalState === 'dashboard'}
+              onClose={() => setAdminModalState(null)}
+              onLogout={() => setAdminModalState(null)}
+            />
+          </div>
+        )}
+      </CartProvider>
     </StockProvider>
   );
 }

@@ -1,26 +1,44 @@
 import React, { useState, useRef } from 'react';
-import { Eye, MessageCircle, Plus, CheckCircle2, Ban, AlertCircle } from 'lucide-react';
+import { Eye, MessageCircle, Plus, CheckCircle2, Ban, AlertCircle, ShoppingBag, Check } from 'lucide-react';
 import { getWhatsAppProductUrl } from '../config/business';
 import { formatRupee } from '../data/products';
 import { useStock } from '../context/StockContext';
+import { useCart } from '../context/CartContext';
 
 export default function ProductCard({ product, onSelect, isSelected }) {
   const cardRef = useRef(null);
   const { getProductStockInfo, isLoading } = useStock();
+  const { addToCart } = useCart();
   const stockInfo = getProductStockInfo(product.id);
   const inStock = stockInfo.inStock;
 
   const [selectedWeight, setSelectedWeight] = useState(
     product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
   );
+  const [isAddedFeedback, setIsAddedFeedback] = useState(false);
 
   const currentPrice = product.prices[selectedWeight];
   const formattedPrice = formatRupee(currentPrice);
   const whatsappUrl = getWhatsAppProductUrl(product.name, selectedWeight, formattedPrice);
 
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    if (!inStock) return;
+    const added = addToCart(product, selectedWeight, 1);
+    if (added) {
+      setIsAddedFeedback(true);
+      setTimeout(() => setIsAddedFeedback(false), 1600);
+    }
+  };
+
   const handleCardClick = (e) => {
     // If the click was on controls inside the card, don't trigger pop-out
-    if (e.target.closest('.card-weight-btn') || e.target.closest('.card-whatsapp-btn') || e.target.closest('.btn-unavailable-card')) {
+    if (
+      e.target.closest('.card-weight-btn') ||
+      e.target.closest('.card-whatsapp-btn') ||
+      e.target.closest('.card-add-cart-btn') ||
+      e.target.closest('.btn-unavailable-card')
+    ) {
       return;
     }
     if (cardRef.current && onSelect) {
@@ -159,20 +177,43 @@ export default function ProductCard({ product, onSelect, isSelected }) {
           </div>
         </div>
 
-        {/* Order / Enquiry Action Row */}
-        <div className="card-whatsapp-action-row" onClick={(e) => e.stopPropagation()}>
+        {/* Order / Add to Cart Action Row */}
+        <div className="card-action-buttons-wrap" onClick={(e) => e.stopPropagation()}>
           {inStock ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-whatsapp-card card-whatsapp-btn"
-              id={`whatsapp-btn-${product.id}`}
-              aria-label={`Enquire about ${product.name} ${selectedWeight} on WhatsApp`}
-            >
-              <MessageCircle size={16} />
-              <span>Click for More Info</span>
-            </a>
+            <div className="card-actions-grid">
+              <button
+                type="button"
+                className={`btn card-add-cart-btn ${isAddedFeedback ? 'is-added' : ''}`}
+                onClick={handleAddToCart}
+                id={`add-to-cart-${product.id}`}
+                aria-label={`Add ${product.name} ${selectedWeight} to cart`}
+              >
+                {isAddedFeedback ? (
+                  <>
+                    <Check size={17} className="btn-icon-check" />
+                    <span>Added to Cart!</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={17} />
+                    <span>Add to Cart</span>
+                  </>
+                )}
+              </button>
+
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-whatsapp-card card-whatsapp-btn"
+                id={`whatsapp-btn-${product.id}`}
+                aria-label={`Enquire about ${product.name} ${selectedWeight} on WhatsApp`}
+                title="Enquire on WhatsApp"
+              >
+                <MessageCircle size={16} />
+                <span>Enquire</span>
+              </a>
+            </div>
           ) : (
             <button
               type="button"
@@ -183,7 +224,7 @@ export default function ProductCard({ product, onSelect, isSelected }) {
               title="This item is currently out of stock"
             >
               <Ban size={16} />
-              <span>Currently Unavailable</span>
+              <span>Out of Stock</span>
             </button>
           )}
         </div>

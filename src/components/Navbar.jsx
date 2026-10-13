@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Menu, X, ChevronRight } from 'lucide-react';
+import { MessageCircle, Menu, X, ChevronRight, ShoppingBag } from 'lucide-react';
 import { BUSINESS_CONFIG, getWhatsAppGeneralUrl } from '../config/business';
+import { useCart } from '../context/CartContext';
 
 export default function Navbar({ onOpenAdmin }) {
+  const { totalItemsCount, openCart } = useCart();
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const logoClicksRef = React.useRef(0);
@@ -118,8 +121,26 @@ export default function Navbar({ onOpenAdmin }) {
           </ul>
         </nav>
 
-        {/* WhatsApp CTA & Mobile Toggle */}
+        {/* WhatsApp CTA, Cart Trigger & Mobile Toggle */}
         <div className="nav-actions">
+          {/* Cart Icon Button with Live Count Badge */}
+          <button
+            type="button"
+            className="nav-cart-btn"
+            onClick={() => openCart('cart')}
+            aria-label={`Shopping cart with ${totalItemsCount} items`}
+            title="Open Shopping Cart"
+            id="nav-cart-toggle-btn"
+          >
+            <ShoppingBag size={20} className="nav-cart-icon" />
+            <span className="nav-cart-text">Cart</span>
+            {totalItemsCount > 0 && (
+              <span className="nav-cart-badge" id="nav-cart-badge-count" aria-live="polite">
+                {totalItemsCount}
+              </span>
+            )}
+          </button>
+
           <a
             href={getWhatsAppGeneralUrl()}
             target="_blank"
@@ -183,6 +204,26 @@ export default function Navbar({ onOpenAdmin }) {
         </nav>
 
         <div className="mobile-menu-footer">
+          {/* Quick Cart button in mobile menu */}
+          <button
+            type="button"
+            className="mobile-menu-cart-btn"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              openCart('cart');
+            }}
+          >
+            <div className="mobile-cart-btn-inner">
+              <ShoppingBag size={20} />
+              <span>Shopping Cart</span>
+            </div>
+            {totalItemsCount > 0 ? (
+              <span className="mobile-cart-badge">{totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'}</span>
+            ) : (
+              <span className="mobile-cart-badge empty">Empty</span>
+            )}
+          </button>
+
           <p className="mobile-footer-tagline">Traditional Andhra pickles made fresh with love.</p>
           <a
             href={getWhatsAppGeneralUrl()}
