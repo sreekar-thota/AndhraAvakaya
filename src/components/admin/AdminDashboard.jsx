@@ -15,9 +15,9 @@ import {
   X,
   FileEdit,
   Image as ImageIcon,
-  ImagePlus,
   Loader2,
-  Layers
+  Camera,
+  Upload
 } from 'lucide-react';
 import { PRODUCTS, formatRupee } from '../../data/products';
 import { BUSINESS_CONFIG } from '../../config/business';
@@ -26,13 +26,12 @@ import { useStock } from '../../context/StockContext';
 export default function AdminDashboard({ onLogout, onNavigateHome }) {
   const { getProductImage, setProductImageLocally } = useStock();
 
-  // Active section tab: 'inventory' | 'images'
-  const [activeTab, setActiveTab] = useState('inventory');
-
-  // Staged product image selections: { [productId]: { file: File, previewUrl: string, name: string, size: number, error: string | null } }
-  const [selectedImages, setSelectedImages] = useState({});
-  // Upload in-progress indicators: { [productId]: boolean }
-  const [uploadingImages, setUploadingImages] = useState({});
+  // Product Image Editing Dialog State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [stagedFile, setStagedFile] = useState(null);
+  const [stagedPreviewUrl, setStagedPreviewUrl] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   // Live server stock state: { [id]: { inStock: boolean, note: string, updatedAt: string } }
   const [serverStock, setServerStock] = useState({});
   // Draft edits working copy: { [id]: { inStock: boolean, note: string } }
@@ -61,102 +60,67 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
     }, 4500);
   };
 
-  // Clean up object URLs on unmount
-  useEffect(() => {
-    return () => {
-      for (const item of Object.values(selectedImages)) {
-        if (item?.previewUrl) {
-          URL.revokeObjectURL(item.previewUrl);
-        }
-      }
-    };
-  }, [selectedImages]);
 
-  // Handle image file selection with validation
-  const handleImageSelect = (productId, file) => {
+
+  // Image editing dialog handlers
+  const handleOpenImageDialog = (product) => {
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
+    setEditingProduct(product);
+    setStagedFile(null);
+    setStagedPreviewUrl(null);
+    setValidationError(null);
+  };
+
+  const handleCloseImageDialog = () => {
+    if (isUploadingImage) return;
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
+    setEditingProduct(null);
+    setStagedFile(null);
+    setStagedPreviewUrl(null);
+    setValidationError(null);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    // Revoke any previous preview for this product
-    if (selectedImages[productId]?.previewUrl) {
-      URL.revokeObjectURL(selectedImages[productId].previewUrl);
-    }
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
 
-    // 1. Validate file format: JPG, JPEG, PNG, WebP
+    // 1. Validate file format
     const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
     const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
 
-    const isMimeValid = validMimes.includes(file.type?.toLowerCase());
-    const isExtValid = validExtensions.includes(ext);
-
-    if (!isMimeValid && !isExtValid) {
-      setSelectedImages((prev) => ({
-        ...prev,
-        [productId]: {
-          file: null,
-          previewUrl: null,
-          name: file.name,
-          size: file.size,
-          error: `Unsupported format "${ext}". Please choose a JPG, JPEG, PNG, or WebP image.`
-        }
-      }));
+    if (!validMimes.includes(file.type?.toLowerCase()) && !validExtensions.includes(ext)) {
+      setStagedFile(null);
+      setStagedPreviewUrl(null);
+      setValidationError(`Unsupported file format "${ext}". Please choose a JPG, JPEG, PNG, or WebP image.`);
       return;
     }
 
-    // 2. Validate file size (<= 5 MB)
-    const MAX_BYTES = 5 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
+    // 2. Validate file size (max 5 MB)
+    if (file.size > 5 * 1024 * 1024) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-      setSelectedImages((prev) => ({
-        ...prev,
-        [productId]: {
-          file: null,
-          previewUrl: null,
-          name: file.name,
-          size: file.size,
-          error: `Image size (${sizeMb} MB) exceeds the 5 MB limit. Please choose a smaller image.`
-        }
-      }));
+      setStagedFile(null);
+      setStagedPreviewUrl(null);
+      setValidationError(`Image size (${sizeMb} MB) exceeds the 5 MB limit. Please select a smaller image.`);
       return;
     }
 
-    // 3. Valid file: create object URL preview
-    const previewUrl = URL.createObjectURL(file);
-    setSelectedImages((prev) => ({
-      ...prev,
-      [productId]: {
-        file,
-        previewUrl,
-        name: file.name,
-        size: file.size,
-        error: null
-      }
-    }));
+    setValidationError(null);
+    setStagedFile(file);
+    setStagedPreviewUrl(URL.createObjectURL(file));
   };
 
-  // Cancel staged image selection
-  const handleCancelImage = (productId) => {
-    if (selectedImages[productId]?.previewUrl) {
-      URL.revokeObjectURL(selectedImages[productId].previewUrl);
-    }
-    setSelectedImages((prev) => {
-      const next = { ...prev };
-      delete next[productId];
-      return next;
-    });
-  };
+  const handleSaveImage = () => {
+    if (!editingProduct || !stagedFile || validationError || isUploadingImage) return;
 
-  // Save selected image to Supabase Storage and database
-  const handleSaveImage = (productId, productName) => {
-    const selection = selectedImages[productId];
-    if (!selection || !selection.file || selection.error) return;
-
-    setUploadingImages((prev) => ({ ...prev, [productId]: true }));
-
+    setIsUploadingImage(true);
     const reader = new FileReader();
+
     reader.onerror = () => {
-      showToast(`Failed to read file: ${selection.name}`, 'error');
-      setUploadingImages((prev) => ({ ...prev, [productId]: false }));
+      showToast('Failed to read image file from your computer', 'error');
+      setIsUploadingImage(false);
     };
 
     reader.onload = async () => {
@@ -168,45 +132,34 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            productId,
+            productId: editingProduct.id,
             fileData: base64Data,
-            mimeType: selection.file.type || 'image/jpeg'
+            mimeType: stagedFile.type || 'image/jpeg'
           })
         });
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.message || 'Server rejected image upload');
+          throw new Error(data.message || 'Image upload failed');
         }
 
-        // Update StockContext immediately
+        // Update local context for instant storefront reactivity
         if (setProductImageLocally) {
-          setProductImageLocally(productId, data.imageUrl);
+          setProductImageLocally(editingProduct.id, data.imageUrl);
         }
 
-        // Clean up preview object URL
-        if (selection.previewUrl) {
-          URL.revokeObjectURL(selection.previewUrl);
-        }
-
-        setSelectedImages((prev) => {
-          const next = { ...prev };
-          delete next[productId];
-          return next;
-        });
-
-        showToast(`✅ Successfully saved new image for "${productName}"!`);
-        // Background sync server stock
+        showToast(`✅ Successfully updated image for "${editingProduct.name}"!`);
+        handleCloseImageDialog();
         fetchCurrentStock(true);
       } catch (err) {
         console.error('Image upload error:', err);
         showToast(`Upload failed: ${err.message}`, 'error');
       } finally {
-        setUploadingImages((prev) => ({ ...prev, [productId]: false }));
+        setIsUploadingImage(false);
       }
     };
 
-    reader.readAsDataURL(selection.file);
+    reader.readAsDataURL(stagedFile);
   };
 
   // Fetch current stock from server
@@ -528,41 +481,9 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
           </div>
         </section>
 
-        {/* Section Navigation Tabs */}
-        <div className="admin-nav-tabs-bar" role="tablist" aria-label="Admin Sections">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'inventory'}
-            className={`admin-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-            onClick={() => setActiveTab('inventory')}
-          >
-            <Layers size={17} />
-            <span>Stock & Availability</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            id="admin-tab-manage-images"
-            aria-selected={activeTab === 'images'}
-            className={`admin-tab-btn ${activeTab === 'images' ? 'active' : ''}`}
-            onClick={() => setActiveTab('images')}
-          >
-            <ImageIcon size={17} />
-            <span>Manage Product Images</span>
-            {Object.keys(selectedImages).length > 0 && (
-              <span className="tab-badge-counter">{Object.keys(selectedImages).length} staged</span>
-            )}
-          </button>
-        </div>
-
-        {/* Inventory View */}
-        {activeTab === 'inventory' && (
-          <>
-            {/* Controls Toolbar: Search, Filters & Bulk Actions */}
-            <section className="admin-controls-card">
-              <div className="admin-controls-top-row">
+        {/* Controls Toolbar: Search, Filters & Bulk Actions */}
+        <section className="admin-controls-card">
+          <div className="admin-controls-top-row">
             {/* Search Box */}
             <div className="admin-search-wrap">
               <Search size={18} className="admin-search-icon" />
@@ -704,14 +625,31 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
                       {/* Product identity */}
                       <td>
                         <div className="product-cell-wrap">
-                          <img
-                            src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
-                            alt={product.name}
-                            className="table-product-thumb"
-                            width="52"
-                            height="52"
-                            loading="lazy"
-                          />
+                          <div
+                            className="table-thumb-clickable"
+                            onClick={() => handleOpenImageDialog(product)}
+                            title={`Click to edit image for ${product.name}`}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleOpenImageDialog(product);
+                              }
+                            }}
+                          >
+                            <img
+                              src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
+                              alt={product.name}
+                              className="table-product-thumb"
+                              width="52"
+                              height="52"
+                              loading="lazy"
+                            />
+                            <div className="table-thumb-overlay">
+                              <Camera size={14} />
+                            </div>
+                          </div>
                           <div className="table-product-info">
                             <span className="table-product-name">{product.name}</span>
                             <span className="table-product-telugu">{product.teluguName}</span>
@@ -790,186 +728,6 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
             </table>
           </div>
         </section>
-        </>
-        )}
-
-        {/* ========================================================= */}
-        {/* SECTION: MANAGE PRODUCT IMAGES                            */}
-        {/* ========================================================= */}
-        {activeTab === 'images' && (
-          <section className="admin-images-section" aria-label="Manage Product Images">
-            <div className="admin-images-header">
-              <div className="admin-images-title-area">
-                <h2>
-                  <ImageIcon size={26} style={{ color: '#D9381E' }} />
-                  <span>Manage Product Images</span>
-                </h2>
-                <p>
-                  Upload high-quality custom jar images for all 20 authentic Andhra Avakaya pickles.
-                  Uploaded images are persistently stored in Supabase Storage and appear instantly on the public website.
-                  Accepts JPG, JPEG, PNG, and WebP (up to 5 MB).
-                </p>
-              </div>
-
-              {/* Category Filter Pills for Images */}
-              <div className="admin-filter-group" style={{ margin: 0 }}>
-                <button
-                  type="button"
-                  className={`admin-filter-pill ${categoryFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('all')}
-                >
-                  All ({totalProductsCount})
-                </button>
-                <button
-                  type="button"
-                  className={`admin-filter-pill ${categoryFilter === 'veg' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('veg')}
-                >
-                  🌱 Veg Pickles (9)
-                </button>
-                <button
-                  type="button"
-                  className={`admin-filter-pill ${categoryFilter === 'non-veg' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('non-veg')}
-                >
-                  🍗 Non Veg Pickles (11)
-                </button>
-              </div>
-            </div>
-
-            {/* Grid of Product Image Management Cards */}
-            <div className="admin-images-grid">
-              {filteredProducts.map((product) => {
-                const selection = selectedImages[product.id];
-                const isUploading = Boolean(uploadingImages[product.id]);
-                const liveImage = getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image;
-                const displayImage = selection?.previewUrl || liveImage;
-                const hasStaged = Boolean(selection?.file && !selection.error);
-
-                return (
-                  <div
-                    key={product.id}
-                    className={`product-image-card ${hasStaged ? 'has-preview' : ''}`}
-                    id={`image-manage-card-${product.id}`}
-                  >
-                    <div className="image-card-top">
-                      <span className={`category-tag ${product.category === 'veg' ? 'tag-veg' : 'tag-non-veg'}`}>
-                        {product.category === 'veg' ? '🌱 Veg' : '🍗 Non-Veg'}
-                      </span>
-                      <span className="image-card-telugu">{product.teluguName}</span>
-                    </div>
-
-                    <h3 className="image-card-title">{product.name}</h3>
-
-                    {/* Image Preview Container */}
-                    <div className="image-preview-container">
-                      <img
-                        src={displayImage}
-                        alt={product.name}
-                        className="image-preview-img"
-                        loading="lazy"
-                      />
-
-                      {selection?.previewUrl && (
-                        <span className="badge-preview-tag">
-                          <Sparkles size={12} />
-                          <span>New Preview</span>
-                        </span>
-                      )}
-
-                      {!selection?.previewUrl && liveImage.includes('supabase.co') && (
-                        <span className="badge-storage-tag">
-                          Cloud Storage
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Staged File Information */}
-                    {selection?.file && !selection.error && (
-                      <div className="staged-file-info">
-                        <span className="staged-file-name" title={selection.name}>
-                          📁 {selection.name}
-                        </span>
-                        <span className="staged-file-size">
-                          {(selection.size / (1024 * 1024)).toFixed(2)} MB
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Validation Error Message */}
-                    {selection?.error && (
-                      <div className="image-validation-alert" role="alert">
-                        <AlertTriangle size={15} />
-                        <span>{selection.error}</span>
-                      </div>
-                    )}
-
-                    {/* Action Controls */}
-                    <div className="image-card-actions">
-                      {/* Change Image Button (File Picker Label) */}
-                      <label
-                        htmlFor={`image-input-${product.id}`}
-                        className="btn-image-action btn-change-image"
-                        title="Select an image file from your computer"
-                      >
-                        <ImagePlus size={15} />
-                        <span>{selection?.file ? 'Choose Another' : 'Change Image'}</span>
-                      </label>
-                      <input
-                        id={`image-input-${product.id}`}
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                        style={{ display: 'none' }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageSelect(product.id, file);
-                          e.target.value = '';
-                        }}
-                      />
-
-                      {/* Save Image Button (Visible when valid file is selected) */}
-                      {selection?.file && !selection.error && (
-                        <button
-                          type="button"
-                          className="btn-image-action btn-save-image"
-                          disabled={isUploading}
-                          onClick={() => handleSaveImage(product.id, product.name)}
-                          id={`save-image-btn-${product.id}`}
-                        >
-                          {isUploading ? (
-                            <>
-                              <Loader2 size={15} className="animate-spin" />
-                              <span>Saving...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Save size={15} />
-                              <span>Save Image</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-
-                      {/* Cancel Button (Visible when file selected or error present) */}
-                      {selection && (
-                        <button
-                          type="button"
-                          className="btn-image-action btn-cancel-image"
-                          disabled={isUploading}
-                          onClick={() => handleCancelImage(product.id)}
-                          title="Discard uncommitted changes"
-                        >
-                          <X size={15} />
-                          <span>Cancel</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
       </main>
 
@@ -1042,6 +800,126 @@ export default function AdminDashboard({ onLogout, onNavigateHome }) {
               >
                 <Check size={15} />
                 <span>Confirm & Apply</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Image Editing Dialog */}
+      {editingProduct && (
+        <div className="admin-image-dialog-overlay" onClick={handleCloseImageDialog}>
+          <div className="admin-image-dialog-card" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="image-dialog-header">
+              <div>
+                <span className="image-dialog-telugu">{editingProduct.teluguName}</span>
+                <h3 className="image-dialog-title">Change Product Image</h3>
+                <span className="image-dialog-product-name">{editingProduct.name}</span>
+              </div>
+              <button
+                type="button"
+                className="btn-dialog-close"
+                onClick={handleCloseImageDialog}
+                aria-label="Close image edit dialog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Previews Body */}
+            <div className="image-dialog-body">
+              <div className="image-previews-grid">
+                {/* Current Image */}
+                <div className="dialog-preview-col">
+                  <span className="preview-label">Current Image</span>
+                  <div className="dialog-img-box">
+                    <img
+                      src={getProductImage ? (getProductImage(editingProduct.id, editingProduct.image) || editingProduct.image) : editingProduct.image}
+                      alt={editingProduct.name}
+                    />
+                  </div>
+                </div>
+
+                {/* Replacement Preview */}
+                <div className="dialog-preview-col">
+                  <span className="preview-label">
+                    {stagedPreviewUrl ? 'New Replacement Preview' : 'Selected Replacement'}
+                  </span>
+                  <div className={`dialog-img-box ${stagedPreviewUrl ? 'has-new-img' : 'placeholder-box'}`}>
+                    {stagedPreviewUrl ? (
+                      <img src={stagedPreviewUrl} alt="Replacement Preview" />
+                    ) : (
+                      <div className="dialog-no-file">
+                        <ImageIcon size={32} />
+                        <span>No new image selected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Staged File Info */}
+              {stagedFile && !validationError && (
+                <div className="dialog-file-meta">
+                  <span className="meta-filename" title={stagedFile.name}>📁 {stagedFile.name}</span>
+                  <span className="meta-filesize">({(stagedFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                </div>
+              )}
+
+              {/* Validation Error Alert */}
+              {validationError && (
+                <div className="dialog-error-alert" role="alert">
+                  <AlertCircle size={16} />
+                  <span>{validationError}</span>
+                </div>
+              )}
+
+              {/* File Picker Row */}
+              <div className="dialog-file-picker-row">
+                <label htmlFor="admin-page-image-picker" className="btn-dialog-choose">
+                  <Upload size={16} />
+                  <span>{stagedFile ? 'Choose Different Image' : 'Choose Image from Computer'}</span>
+                </label>
+                <input
+                  id="admin-page-image-picker"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+                <span className="dialog-format-hint">JPG, JPEG, PNG, or WebP (Max 5 MB)</span>
+              </div>
+            </div>
+
+            {/* Dialog Footer Actions */}
+            <div className="image-dialog-footer">
+              <button
+                type="button"
+                className="btn-dialog-cancel"
+                onClick={handleCloseImageDialog}
+                disabled={isUploadingImage}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="btn-dialog-save"
+                onClick={handleSaveImage}
+                disabled={!stagedFile || Boolean(validationError) || isUploadingImage}
+              >
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Saving to Supabase...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>Save Image</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

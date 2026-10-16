@@ -13,14 +13,17 @@ import {
   AlertCircle,
   Loader2,
   Check,
-  Filter
+  Filter,
+  Camera,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { PRODUCTS, formatRupee } from '../../data/products';
 import { BUSINESS_CONFIG } from '../../config/business';
 import { useStock } from '../../context/StockContext';
 
 export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
-  const { refreshStock, getProductImage } = useStock();
+  const { refreshStock, getProductImage, setProductImageLocally } = useStock();
 
   // Server state & draft working state
   const [serverStock, setServerStock] = useState({});
@@ -34,11 +37,118 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
   // Toast notification
   const [toastMessage, setToastMessage] = useState(null); // { text, type: 'success' | 'error' }
 
+  // Product Image Editing Dialog State
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [stagedFile, setStagedFile] = useState(null);
+  const [stagedPreviewUrl, setStagedPreviewUrl] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
   const showToast = (text, type = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => {
       setToastMessage((prev) => (prev?.text === text ? null : prev));
     }, 4000);
+  };
+
+  // Image editing dialog handlers
+  const handleOpenImageDialog = (product) => {
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
+    setEditingProduct(product);
+    setStagedFile(null);
+    setStagedPreviewUrl(null);
+    setValidationError(null);
+  };
+
+  const handleCloseImageDialog = () => {
+    if (isUploadingImage) return;
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
+    setEditingProduct(null);
+    setStagedFile(null);
+    setStagedPreviewUrl(null);
+    setValidationError(null);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (stagedPreviewUrl) URL.revokeObjectURL(stagedPreviewUrl);
+
+    // 1. Validate file format
+    const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+
+    if (!validMimes.includes(file.type?.toLowerCase()) && !validExtensions.includes(ext)) {
+      setStagedFile(null);
+      setStagedPreviewUrl(null);
+      setValidationError(`Unsupported file format "${ext}". Please choose a JPG, JPEG, PNG, or WebP image.`);
+      return;
+    }
+
+    // 2. Validate file size (max 5 MB)
+    if (file.size > 5 * 1024 * 1024) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      setStagedFile(null);
+      setStagedPreviewUrl(null);
+      setValidationError(`Image size (${sizeMb} MB) exceeds the 5 MB limit. Please select a smaller image.`);
+      return;
+    }
+
+    setValidationError(null);
+    setStagedFile(file);
+    setStagedPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleSaveImage = () => {
+    if (!editingProduct || !stagedFile || validationError || isUploadingImage) return;
+
+    setIsUploadingImage(true);
+    const reader = new FileReader();
+
+    reader.onerror = () => {
+      showToast('Failed to read image file from your computer', 'error');
+      setIsUploadingImage(false);
+    };
+
+    reader.onload = async () => {
+      try {
+        const base64Data = reader.result;
+        const res = await fetch('/api/admin/product-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            productId: editingProduct.id,
+            fileData: base64Data,
+            mimeType: stagedFile.type || 'image/jpeg'
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Image upload failed');
+        }
+
+        // Update local context for instant storefront reactivity
+        if (setProductImageLocally) {
+          setProductImageLocally(editingProduct.id, data.imageUrl);
+        }
+
+        showToast(`✅ Successfully updated image for "${editingProduct.name}"!`);
+        handleCloseImageDialog();
+        fetchCurrentStock(true);
+      } catch (err) {
+        console.error('Image upload error:', err);
+        showToast(`Upload failed: ${err.message}`, 'error');
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+
+    reader.readAsDataURL(stagedFile);
   };
 
   // Fetch current stock from server
@@ -411,8 +521,20 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                     className={`admin-item-card ${!inStock ? 'item-out-of-stock' : 'item-in-stock'}`}
                     id={`admin-item-${product.id}`}
                   >
-                    {/* Item Thumbnail */}
-                    <div className="item-thumbnail-wrap">
+                    {/* Item Thumbnail with Camera/Edit Button */}
+                    <div
+                      className="item-thumbnail-wrap thumbnail-clickable"
+                      onClick={() => handleOpenImageDialog(product)}
+                      title={`Click to change image for ${product.name}`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleOpenImageDialog(product);
+                        }
+                      }}
+                    >
                       <img
                         src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
                         alt={product.name}
@@ -421,6 +543,10 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                         width="80"
                         height="80"
                       />
+                      <div className="thumbnail-camera-overlay">
+                        <Camera size={15} />
+                        <span>Edit</span>
+                      </div>
                       <span className={`status-pill ${inStock ? 'pill-in' : 'pill-out'}`}>
                         {inStock ? 'In Stock' : 'Out of Stock'}
                       </span>
@@ -525,8 +651,20 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                     className={`admin-item-card ${!inStock ? 'item-out-of-stock' : 'item-in-stock'}`}
                     id={`admin-item-${product.id}`}
                   >
-                    {/* Item Thumbnail */}
-                    <div className="item-thumbnail-wrap">
+                    {/* Item Thumbnail with Camera/Edit Button */}
+                    <div
+                      className="item-thumbnail-wrap thumbnail-clickable"
+                      onClick={() => handleOpenImageDialog(product)}
+                      title={`Click to change image for ${product.name}`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleOpenImageDialog(product);
+                        }
+                      }}
+                    >
                       <img
                         src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
                         alt={product.name}
@@ -535,6 +673,10 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                         width="80"
                         height="80"
                       />
+                      <div className="thumbnail-camera-overlay">
+                        <Camera size={15} />
+                        <span>Edit</span>
+                      </div>
                       <span className={`status-pill ${inStock ? 'pill-in' : 'pill-out'}`}>
                         {inStock ? 'In Stock' : 'Out of Stock'}
                       </span>
@@ -632,6 +774,128 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
           </div>
         </footer>
       </div>
+
+      {/* ========================================================= */}
+      {/* Product Image Editing Dialog                              */}
+      {/* ========================================================= */}
+      {editingProduct && (
+        <div className="admin-image-dialog-overlay" onClick={handleCloseImageDialog}>
+          <div className="admin-image-dialog-card" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="image-dialog-header">
+              <div>
+                <span className="image-dialog-telugu">{editingProduct.teluguName}</span>
+                <h3 className="image-dialog-title">Change Product Image</h3>
+                <span className="image-dialog-product-name">{editingProduct.name}</span>
+              </div>
+              <button
+                type="button"
+                className="btn-dialog-close"
+                onClick={handleCloseImageDialog}
+                aria-label="Close image edit dialog"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Previews Body */}
+            <div className="image-dialog-body">
+              <div className="image-previews-grid">
+                {/* Current Image */}
+                <div className="dialog-preview-col">
+                  <span className="preview-label">Current Image</span>
+                  <div className="dialog-img-box">
+                    <img
+                      src={getProductImage ? (getProductImage(editingProduct.id, editingProduct.image) || editingProduct.image) : editingProduct.image}
+                      alt={editingProduct.name}
+                    />
+                  </div>
+                </div>
+
+                {/* Replacement Preview */}
+                <div className="dialog-preview-col">
+                  <span className="preview-label">
+                    {stagedPreviewUrl ? 'New Replacement Preview' : 'Selected Replacement'}
+                  </span>
+                  <div className={`dialog-img-box ${stagedPreviewUrl ? 'has-new-img' : 'placeholder-box'}`}>
+                    {stagedPreviewUrl ? (
+                      <img src={stagedPreviewUrl} alt="Replacement Preview" />
+                    ) : (
+                      <div className="dialog-no-file">
+                        <ImageIcon size={32} />
+                        <span>No new image selected</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Staged File Info */}
+              {stagedFile && !validationError && (
+                <div className="dialog-file-meta">
+                  <span className="meta-filename" title={stagedFile.name}>📁 {stagedFile.name}</span>
+                  <span className="meta-filesize">({(stagedFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                </div>
+              )}
+
+              {/* Validation Error Alert */}
+              {validationError && (
+                <div className="dialog-error-alert" role="alert">
+                  <AlertCircle size={16} />
+                  <span>{validationError}</span>
+                </div>
+              )}
+
+              {/* File Picker Row */}
+              <div className="dialog-file-picker-row">
+                <label htmlFor="modal-image-picker" className="btn-dialog-choose">
+                  <Upload size={16} />
+                  <span>{stagedFile ? 'Choose Different Image' : 'Choose Image from Computer'}</span>
+                </label>
+                <input
+                  id="modal-image-picker"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
+                />
+                <span className="dialog-format-hint">JPG, JPEG, PNG, or WebP (Max 5 MB)</span>
+              </div>
+            </div>
+
+            {/* Dialog Footer Actions */}
+            <div className="image-dialog-footer">
+              <button
+                type="button"
+                className="btn-dialog-cancel"
+                onClick={handleCloseImageDialog}
+                disabled={isUploadingImage}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="btn-dialog-save"
+                onClick={handleSaveImage}
+                disabled={!stagedFile || Boolean(validationError) || isUploadingImage}
+              >
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Saving to Supabase...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>Save Image</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
