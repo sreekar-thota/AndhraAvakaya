@@ -68,5 +68,32 @@ VALUES
   ('crab-pickle', true, '', now())
 ON CONFLICT (id) DO NOTHING;
 
--- 7. Verify all 20 products are present
-SELECT id, in_stock, note, updated_at FROM public.inventory ORDER BY id ASC;
+-- 7. Add image_url column if not present (for persistent custom product images)
+ALTER TABLE public.inventory ADD COLUMN IF NOT EXISTS image_url TEXT DEFAULT '';
+
+-- 8. Verify all 20 products are present with image_url
+SELECT id, in_stock, note, image_url, updated_at FROM public.inventory ORDER BY id ASC;
+
+-- ============================================================================
+-- Supabase Storage: Product Images Bucket Setup
+-- ============================================================================
+-- A public bucket named 'product-images' is used for custom pickle images.
+-- Bucket creation & policy:
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'product-images',
+  'product-images',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp']
+)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Allow public anonymous read access to view product images on the website
+DROP POLICY IF EXISTS "Allow public read access to product images" ON storage.objects;
+CREATE POLICY "Allow public read access to product images"
+  ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'product-images');
+

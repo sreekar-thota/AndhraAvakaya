@@ -20,7 +20,7 @@ import { BUSINESS_CONFIG } from '../../config/business';
 import { useStock } from '../../context/StockContext';
 
 export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
-  const { refreshStock } = useStock();
+  const { refreshStock, getProductImage } = useStock();
 
   // Server state & draft working state
   const [serverStock, setServerStock] = useState({});
@@ -414,7 +414,7 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                     {/* Item Thumbnail */}
                     <div className="item-thumbnail-wrap">
                       <img
-                        src={product.image}
+                        src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
                         alt={product.name}
                         className="item-thumbnail"
                         loading="lazy"
@@ -528,7 +528,7 @@ export default function AdminDashboardModal({ isOpen, onClose, onLogout }) {
                     {/* Item Thumbnail */}
                     <div className="item-thumbnail-wrap">
                       <img
-                        src={product.image}
+                        src={getProductImage ? (getProductImage(product.id, product.image) || product.image) : product.image}
                         alt={product.name}
                         className="item-thumbnail"
                         loading="lazy"

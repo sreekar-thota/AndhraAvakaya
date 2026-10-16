@@ -68,16 +68,49 @@ export function StockProvider({ children }) {
   }, [stockMap, isLoading]);
 
   const getProductStockInfo = useCallback((productId) => {
-    if (!productId) return { inStock: true, note: '' };
+    if (!productId) return { inStock: true, note: '', imageUrl: '', image: '' };
     const item = stockMap[productId];
-    if (!item) return { inStock: true, note: '' };
+    if (!item) return { inStock: true, note: '', imageUrl: '', image: '' };
     return {
       inStock: item.inStock !== false,
       note: item.note || item.stock_note || '',
       stock_note: item.stock_note || item.note || '',
+      imageUrl: item.imageUrl || item.image || '',
+      image: item.image || item.imageUrl || '',
       updatedAt: item.updatedAt
     };
   }, [stockMap]);
+
+  /**
+   * Get current product image URL with fallback
+   */
+  const getProductImage = useCallback((productId, fallback = '') => {
+    if (!productId) return fallback;
+    const item = stockMap[productId];
+    if (item && (item.imageUrl || item.image)) {
+      return item.imageUrl || item.image;
+    }
+    return fallback;
+  }, [stockMap]);
+
+  /**
+   * Update product image URL immediately in local state
+   */
+  const setProductImageLocally = useCallback((productId, newUrl) => {
+    if (!productId || !newUrl) return;
+    setStockMap((prev) => {
+      const current = prev[productId] || { inStock: true, note: '' };
+      return {
+        ...prev,
+        [productId]: {
+          ...current,
+          imageUrl: newUrl,
+          image: newUrl,
+          updatedAt: new Date().toISOString()
+        }
+      };
+    });
+  }, []);
 
   return (
     <StockContext.Provider
@@ -88,7 +121,9 @@ export function StockProvider({ children }) {
         lastFetched,
         refreshStock: fetchStock,
         isProductInStock,
-        getProductStockInfo
+        getProductStockInfo,
+        getProductImage,
+        setProductImageLocally
       }}
     >
       {children}

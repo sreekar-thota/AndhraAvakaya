@@ -7,10 +7,11 @@ import { useCart } from '../context/CartContext';
 
 export default function ProductCard({ product, onSelect, isSelected }) {
   const cardRef = useRef(null);
-  const { getProductStockInfo, isLoading } = useStock();
+  const { getProductStockInfo, getProductImage, isLoading } = useStock();
   const { addToCart } = useCart();
   const stockInfo = getProductStockInfo(product.id);
   const inStock = stockInfo.inStock;
+  const productImage = getProductImage(product.id, product.image);
 
   const [selectedWeight, setSelectedWeight] = useState(
     product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
@@ -24,7 +25,7 @@ export default function ProductCard({ product, onSelect, isSelected }) {
   const handleAddToCart = (e) => {
     e.stopPropagation();
     if (!inStock) return;
-    const added = addToCart(product, selectedWeight, 1);
+    const added = addToCart({ ...product, image: productImage }, selectedWeight, 1);
     if (added) {
       setIsAddedFeedback(true);
       setTimeout(() => setIsAddedFeedback(false), 1600);
@@ -43,7 +44,7 @@ export default function ProductCard({ product, onSelect, isSelected }) {
     }
     if (cardRef.current && onSelect) {
       const rect = cardRef.current.getBoundingClientRect();
-      onSelect(product, rect, selectedWeight, stockInfo);
+      onSelect({ ...product, image: productImage }, rect, selectedWeight, stockInfo);
     }
   };
 
@@ -77,7 +78,7 @@ export default function ProductCard({ product, onSelect, isSelected }) {
       {/* Product Image Box */}
       <div className="product-image-container">
         <img
-          src={product.image}
+          src={productImage}
           alt={product.name}
           className={`product-thumbnail ${!inStock ? 'thumbnail-unavailable' : ''}`}
           loading="lazy"

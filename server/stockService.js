@@ -96,8 +96,36 @@ export function matchCatalogProduct(row) {
 
 // In-memory cache for fast lookups & fallbacks
 let inMemoryStockCache = null;
+let inMemoryImageMapCache = null;
 // Map from canonical product id -> database id (in case DB uses an alternate ID)
 const dbIdMap = new Map();
+
+/**
+ * Get image mappings stored in Supabase Storage bucket 'product-images'
+ */
+export async function getStorageImageMap(forceRefresh = false) {
+  if (inMemoryImageMapCache && !forceRefresh) return { ...inMemoryImageMapCache };
+  const supabase = getSupabaseClient();
+  if (!supabase) return inMemoryImageMapCache ? { ...inMemoryImageMapCache } : {};
+
+  try {
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .download('_meta/image_map.json');
+
+    if (data && !error) {
+      const text = await data.text();
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        inMemoryImageMapCache = parsed;
+        return { ...parsed };
+      }
+    }
+  } catch (err) {
+    // Non-critical if manifest not created yet
+  }
+  return inMemoryImageMapCache ? { ...inMemoryImageMapCache } : {};
+}
 
 /**
  * Get initial default stock dictionary for all 20 products
@@ -110,6 +138,8 @@ export function getDefaultStock() {
       inStock: true,
       note: '',
       stock_note: '',
+      imageUrl: '',
+      image: '',
       updatedAt: now
     };
   }
@@ -133,6 +163,8 @@ function readLocalFallback() {
           inStock: item.inStock !== false,
           note: item.note || item.stock_note || '',
           stock_note: item.note || item.stock_note || '',
+          imageUrl: item.imageUrl || item.image || '',
+          image: item.image || item.imageUrl || '',
           updatedAt: item.updatedAt || now
         };
       }
@@ -155,13 +187,30 @@ export async function getStock() {
   const supabase = getSupabaseClient();
   const now = new Date().toISOString();
 
+  // Load storage image map
+  const storageImageMap = await getStorageImageMap();
+
   // 1. Try querying Supabase public.inventory table
   if (supabase) {
     try {
-      // Columns: id, name, category, in_stock, stock_note, updated_at
-      const { data, error } = await supabase
+      // First attempt query with image_url column
+      let data = null;
+      let error = null;
+
+      const resWithImage = await supabase
         .from('inventory')
-        .select('id, name, category, in_stock, stock_note, updated_at');
+        .select('id, name, category, in_stock, stock_note, image_url, updated_at');
+
+      if (!resWithImage.error && Array.isArray(resWithImage.data)) {
+        data = resWithImage.data;
+      } else {
+        // Fallback to query without image_url column if not yet created in SQL
+        const resBasic = await supabase
+          .from('inventory')
+          .select('id, name, category, in_stock, stock_note, updated_at');
+        data = resBasic.data;
+        error = resBasic.error;
+      }
 
       if (!error && Array.isArray(data)) {
         const stockMap = {};
@@ -180,10 +229,15 @@ export async function getStock() {
             // Support 'stock_note' as primary, with fallback to 'note' if present
             const note = row.stock_note != null ? String(row.stock_note) : (row.note != null ? String(row.note) : '');
 
+            // Product image: priority to database image_url, then storage image map
+            const imageUrl = (row.image_url && String(row.image_url).trim()) || storageImageMap[canonicalId] || '';
+
             stockMap[canonicalId] = {
               inStock,
               note,
               stock_note: note,
+              imageUrl,
+              image: imageUrl,
               updatedAt: row.updated_at || now
             };
           }
@@ -311,6 +365,7 @@ export async function updateStock(updates) {
     });
 
     currentStock[canonicalId] = {
+      ...currentStock[canonicalId],
       inStock,
       note,
       stock_note: note,
@@ -370,3 +425,149 @@ export async function updateStock(updates) {
     updatedAt: now
   };
 }
+
+/**
+ * Upload and save a new product image to Supabase Storage and database
+ *
+ * @param {string} productId - Canonical or matched product ID
+ * @param {Buffer} fileBuffer - Image file buffer
+ * @param {string} mimeType - Image MIME type ('image/jpeg', 'image/png', 'image/webp')
+ * @returns {Promise<{ success: boolean, productId: string, imageUrl: string }>}
+ */
+export async function saveProductImage(productId, fileBuffer, mimeType) {
+  if (!productId || typeof productId !== 'string') {
+    throw new Error('Valid productId is required');
+  }
+
+  const matchedProduct =
+    PRODUCTS_CATALOG.find((p) => p.id === productId) ||
+    matchCatalogProduct({ id: productId, name: productId });
+
+  if (!matchedProduct) {
+    throw new Error(`Product not found: "${productId}"`);
+  }
+
+  const canonicalId = matchedProduct.id;
+
+  // Validate buffer and size (max 5 MB)
+  if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+    throw new Error('Invalid or empty image file data');
+  }
+
+  const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+  if (fileBuffer.length > MAX_SIZE) {
+    throw new Error(`Image file size (${(fileBuffer.length / (1024 * 1024)).toFixed(2)} MB) exceeds the 5 MB limit`);
+  }
+
+  // Validate allowed MIME types
+  const MIME_EXT_MAP = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp'
+  };
+
+  const normalizedMime = (mimeType || '').toLowerCase().trim();
+  const ext = MIME_EXT_MAP[normalizedMime];
+  if (!ext) {
+    throw new Error(`Unsupported image type "${mimeType}". Allowed formats: JPG, JPEG, PNG, WebP.`);
+  }
+
+  const supabase = getSupabaseClient();
+  if (!supabase) {
+    throw new Error('Supabase client is not configured. Please check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+  }
+
+  // Versioned cache-busting filename
+  const timestamp = Date.now();
+  const fileName = `img-${timestamp}.${ext}`;
+  const filePath = `${canonicalId}/${fileName}`;
+
+  // 1. Upload to dedicated Supabase Storage bucket 'product-images'
+  const { data: uploadData, error: uploadErr } = await supabase.storage
+    .from('product-images')
+    .upload(filePath, fileBuffer, {
+      contentType: normalizedMime,
+      upsert: true
+    });
+
+  if (uploadErr) {
+    console.error('[stockService] Storage upload error:', uploadErr);
+    throw new Error(`Supabase Storage upload failed: ${uploadErr.message}`);
+  }
+
+  // 2. Retrieve public URL
+  const { data: urlData } = supabase.storage
+    .from('product-images')
+    .getPublicUrl(filePath);
+
+  const publicUrl = urlData?.publicUrl;
+  if (!publicUrl) {
+    throw new Error('Failed to generate public URL for uploaded image');
+  }
+
+  // 3. Remove older image versions for this product in bucket to conserve storage
+  try {
+    const { data: existingFiles } = await supabase.storage
+      .from('product-images')
+      .list(canonicalId);
+
+    if (Array.isArray(existingFiles)) {
+      const filesToRemove = existingFiles
+        .filter((f) => f.name !== fileName && f.name.startsWith('img-'))
+        .map((f) => `${canonicalId}/${f.name}`);
+
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from('product-images').remove(filesToRemove);
+      }
+    }
+  } catch (cleanErr) {
+    console.warn('[stockService] Cleanup warning (non-critical):', cleanErr.message);
+  }
+
+  // 4. Update persistent storage manifest (_meta/image_map.json)
+  try {
+    const currentMap = await getStorageImageMap();
+    currentMap[canonicalId] = publicUrl;
+    inMemoryImageMapCache = currentMap;
+
+    const manifestBuffer = Buffer.from(JSON.stringify(currentMap, null, 2), 'utf-8');
+    await supabase.storage
+      .from('product-images')
+      .upload('_meta/image_map.json', manifestBuffer, {
+        contentType: 'application/json',
+        upsert: true
+      });
+  } catch (mErr) {
+    console.warn('[stockService] Manifest update warning:', mErr.message);
+  }
+
+  // 5. Try updating public.inventory.image_url in Supabase database
+  try {
+    const dbId = dbIdMap.get(canonicalId) || canonicalId;
+    await supabase
+      .from('inventory')
+      .update({
+        image_url: publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', dbId);
+  } catch (dbErr) {
+    // Graceful if column image_url is not created yet
+    console.warn('[stockService] Database image_url update notice:', dbErr.message);
+  }
+
+  // 6. Update in-memory stock cache if present
+  if (inMemoryStockCache && inMemoryStockCache[canonicalId]) {
+    inMemoryStockCache[canonicalId].imageUrl = publicUrl;
+    inMemoryStockCache[canonicalId].image = publicUrl;
+    inMemoryStockCache[canonicalId].updatedAt = new Date().toISOString();
+  }
+
+  return {
+    success: true,
+    productId: canonicalId,
+    imageUrl: publicUrl
+  };
+}
+

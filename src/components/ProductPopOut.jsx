@@ -6,10 +6,11 @@ import { useStock } from '../context/StockContext';
 import { useCart } from '../context/CartContext';
 
 export default function ProductPopOut({ product, originRect, initialWeight, onClose }) {
-  const { getProductStockInfo } = useStock();
+  const { getProductStockInfo, getProductImage } = useStock();
   const { addToCart, openCart } = useCart();
   const stockInfo = getProductStockInfo(product.id);
   const inStock = stockInfo.inStock;
+  const productImage = getProductImage ? getProductImage(product.id, product.image) : product.image;
 
   const [selectedWeight, setSelectedWeight] = useState(
     initialWeight || product.defaultWeight || (product.category === 'non-veg' ? '500 g' : '1 kg')
@@ -136,7 +137,7 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
           {/* Top Visual Showcase */}
           <div className="popout-image-header">
             <img
-              src={product.image}
+              src={productImage}
               alt={product.name}
               className={`popout-hero-image ${!inStock ? 'thumbnail-unavailable' : ''}`}
             />
@@ -262,7 +263,7 @@ export default function ProductPopOut({ product, originRect, initialWeight, onCl
                       type="button"
                       className={`btn btn-primary popout-cart-btn ${isAddedFeedback ? 'is-added' : ''}`}
                       onClick={() => {
-                        const added = addToCart(product, selectedWeight, 1);
+                        const added = addToCart({ ...product, image: productImage }, selectedWeight, 1);
                         if (added) {
                           setIsAddedFeedback(true);
                           setTimeout(() => setIsAddedFeedback(false), 1600);

@@ -6,7 +6,7 @@ import {
   getSessionCookieHeader,
   getClearSessionCookieHeader
 } from './auth.js';
-import { getStock, updateStock } from './stockService.js';
+import { getStock, updateStock, saveProductImage } from './stockService.js';
 
 /**
  * Read request body as JSON
@@ -19,10 +19,10 @@ function readJsonBody(req) {
     let data = '';
     req.on('data', (chunk) => {
       data += chunk;
-      // Safeguard against large payloads (>1MB)
-      if (data.length > 1e6) {
+      // Safeguard against large payloads (>10MB for base64 images)
+      if (data.length > 10 * 1024 * 1024) {
         req.destroy();
-        reject(new Error('Payload too large'));
+        reject(new Error('Payload too large (max 10MB)'));
       }
     });
     req.on('end', () => {
@@ -197,6 +197,76 @@ export async function handleApiRequest(req, res) {
         stock: result.stock,
         updatedCount: result.updatedCount,
         updatedAt: result.updatedAt
+      });
+      return true;
+    }
+
+    // -------------------------------------------------------------
+    // 6. PROTECTED: POST /api/admin/product-image (Upload product image)
+    // -------------------------------------------------------------
+    if (pathname === '/api/admin/product-image' && method === 'POST') {
+      const auth = checkAdminAuth(req);
+      if (!auth.valid) {
+        sendJson(res, 401, {
+          success: false,
+          message: 'Unauthorized: Admin session required to upload product images'
+        });
+        return true;
+      }
+
+      const body = await readJsonBody(req);
+      const { productId, fileData, mimeType } = body || {};
+
+      if (!productId || typeof productId !== 'string') {
+        sendJson(res, 400, {
+          success: false,
+          message: 'Missing or invalid productId'
+        });
+        return true;
+      }
+
+      if (!fileData || typeof fileData !== 'string') {
+        sendJson(res, 400, {
+          success: false,
+          message: 'Missing fileData (expected base64 string or data URL)'
+        });
+        return true;
+      }
+
+      // Strip potential data URL prefix: "data:image/jpeg;base64,..."
+      let base64Content = fileData;
+      let detectedMime = mimeType;
+
+      const dataUrlMatch = fileData.match(/^data:([^;]+);base64,(.+)$/);
+      if (dataUrlMatch) {
+        detectedMime = detectedMime || dataUrlMatch[1];
+        base64Content = dataUrlMatch[2];
+      }
+
+      if (!detectedMime) {
+        sendJson(res, 400, {
+          success: false,
+          message: 'Missing image MIME type (e.g. image/jpeg, image/png, image/webp)'
+        });
+        return true;
+      }
+
+      const buffer = Buffer.from(base64Content, 'base64');
+      if (buffer.length === 0) {
+        sendJson(res, 400, {
+          success: false,
+          message: 'Image data could not be parsed or is empty'
+        });
+        return true;
+      }
+
+      const result = await saveProductImage(productId, buffer, detectedMime);
+
+      sendJson(res, 200, {
+        success: true,
+        message: 'Product image updated successfully',
+        productId: result.productId,
+        imageUrl: result.imageUrl
       });
       return true;
     }
